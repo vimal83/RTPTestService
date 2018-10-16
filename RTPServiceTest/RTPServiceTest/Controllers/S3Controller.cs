@@ -23,7 +23,7 @@ namespace RTPServiceTest.Controllers
                 HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.Created);
                 AmazonS3Downloader S3Download = new AmazonS3Downloader();
                 List<string> URLS = new List<string>();
-                URLS = S3Download.GetS3ObjectsURLs();
+                URLS = S3Download.GetS3ObjectsURLs("rtpuserfile");
 
                 if (URLS.Count() > 0)
                 {
@@ -45,37 +45,47 @@ namespace RTPServiceTest.Controllers
         }
 
 
-        public async Task<HttpResponseMessage> GetEmployeeFiles(int EmployeeID)
+        public async Task<HttpResponseMessage> GetUserFiles(string UserProfileId)
         {
             Dictionary<string, object> dict = new Dictionary<string, object>();
             try
             {
                 HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.Created);
-                List<string> URLS = new List<string>();
+                //List<string> URLS = new List<string>();
+                string URLS = "";
                 AmazonS3Downloader S3Download = new AmazonS3Downloader();
 
 
                 RDSData rds = new RDSData();
                 DataTable dt = new DataTable();
-                dt = rds.SP_GetFileByEmployee(EmployeeID);
+                dt = rds.GetUserFiles(UserProfileId);
                 if (dt.Rows.Count > 0)
                 {
-                    for (int i = 0; i < dt.Rows.Count; i++)
-                    {
-                        URLS.Add(dt.Rows[i]["FileName"].ToString());
-                    }
+                    dt.Columns.Add("ImgURL", typeof(String));
 
-                    URLS = S3Download.GetS3ObjectsURLsByEmployeeID(URLS);
-
-                    if (URLS.Count() > 0)
+                    foreach (DataRow row in dt.Rows)
                     {
-                        return Request.CreateResponse(HttpStatusCode.OK, URLS);
+                        URLS = S3Download.GetS3ObjectsURLsByFileName("rtpplaces", row["PlaceImage"].ToString());
+                        //need to set value to NewColumn column
+                        row["ImgURL"] = URLS;
                     }
-                    else
-                    {
-                        return Request.CreateErrorResponse(HttpStatusCode.NotFound, "No Records found");
+                    return Request.CreateResponse(HttpStatusCode.OK, dt);
+                    //    for (int i = 0; i < dt.Rows.Count; i++)
+                    //{
+                    //    URLS.Add(dt.Rows[i]["FileName"].ToString());
+                    //}
 
-                    }
+                    //URLS = S3Download.GetS3ObjectsURLsByEmployeeID("rtpuserfile",URLS);
+
+                    //if (URLS.Count() > 0)
+                    //{
+                    //    return Request.CreateResponse(HttpStatusCode.OK, URLS);
+                    //}
+                    //else
+                    //{
+                    //    return Request.CreateErrorResponse(HttpStatusCode.NotFound, "No Records found");
+
+                    //}
                 }
                 else
                 {
@@ -93,7 +103,7 @@ namespace RTPServiceTest.Controllers
 
         // POST api/values
         [AllowAnonymous]
-        public async Task<HttpResponseMessage> PostFileByEmployee(int EmpId)
+        public async Task<HttpResponseMessage> PostFileByUser(string UserProfileId)
         {
             Dictionary<string, object> dict = new Dictionary<string, object>();
             try
@@ -150,7 +160,7 @@ namespace RTPServiceTest.Controllers
                             {
                                 RDSData rds = new RDSData();
                                 string bucketName = "vimalarockia83/images1";
-                                int val = rds.SP_SaveFileDetails(EmpId, postedFile.FileName, bucketName);
+                                int val = rds.SaveUserFiles(UserProfileId, postedFile.FileName, bucketName);
                                 var message1 = string.Format("Image Updated Successfully.");
                                 return Request.CreateResponse(HttpStatusCode.Created, message1);
                             }

@@ -12,7 +12,7 @@ namespace RTPServiceTest.Models
         private string bucketName = "vimalarockia83";
         static IAmazonS3 client;
 
-        public List<String> GetS3ObjectsURLs()
+        public List<String> GetS3ObjectsURLs(string Bucket)
         {
             List<string> S3URLs = new List<string>();
 
@@ -24,7 +24,7 @@ namespace RTPServiceTest.Models
                 {
                     ListObjectsV2Request request = new ListObjectsV2Request
                     {
-                        BucketName = bucketName,
+                        BucketName = Bucket,
                         MaxKeys = 10
                     };
                     ListObjectsV2Response response;
@@ -66,7 +66,7 @@ namespace RTPServiceTest.Models
             return S3URLs;
         }
 
-        public List<String> GetS3ObjectsURLsByEmployeeID(List<string> FileKeys)
+        public List<String> GetS3ObjectsURLsByEmployeeID(string Bucket,List<string> FileKeys)
         {
             List<string> S3URLs = new List<string>();
 
@@ -91,7 +91,7 @@ namespace RTPServiceTest.Models
                     foreach (string Key in FileKeys)
                     {
                         GetPreSignedUrlRequest request1 = new GetPreSignedUrlRequest();
-                        request1.BucketName = bucketName;
+                        request1.BucketName = Bucket;
                         //request1.Key = file.Name;
                         request1.Key = Key;
                         request1.Expires = DateTime.Now.AddHours(1);
@@ -115,6 +115,44 @@ namespace RTPServiceTest.Models
                     else
                     {
                         //returnmsg = "Error occurred: " + amazonS3Exception.Message;
+                    }
+                }
+            }
+            return S3URLs;
+        }
+
+        public string GetS3ObjectsURLsByFileName(string Bucket, string FileKeys)
+        {
+            string S3URLs ="";
+            string msg = "";
+
+            //var client = new AmazonS3Client(Amazon.RegionEndpoint.USEast1);
+
+            using (client = new AmazonS3Client(Amazon.RegionEndpoint.APSouth1))
+            {
+                try
+                {  
+                        GetPreSignedUrlRequest request1 = new GetPreSignedUrlRequest();
+                        request1.BucketName = Bucket;
+                        //request1.Key = file.Name;
+                        request1.Key = FileKeys;
+                        request1.Expires = DateTime.Now.AddHours(1);
+                        //request1.Protocol = Protocol.HTTP;
+                        S3URLs = client.GetPreSignedURL(request1);                   
+
+                }
+                catch (AmazonS3Exception amazonS3Exception)
+                {
+                    if (amazonS3Exception.ErrorCode != null &&
+                        (amazonS3Exception.ErrorCode.Equals("InvalidAccessKeyId")
+                        ||
+                        amazonS3Exception.ErrorCode.Equals("InvalidSecurity")))
+                    {
+                         return msg = "Check the provided AWS Credentials.";
+                    }
+                    else
+                    {
+                        return msg = "Error occurred: " + amazonS3Exception.Message;
                     }
                 }
             }
